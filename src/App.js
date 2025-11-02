@@ -6,28 +6,28 @@ import { loadSentimentModel, getSentimentScore } from './sentiment';
 import GratitudeBloom from './components/GratitudeBloom';
 
 const styles = {
-  // ... (styles from before)
   app: {
     fontFamily: "'Merriweather', serif",
     textAlign: 'center',
-    color: '#333',
-    backgroundColor: '#f5f5f5',
+    color: '#4a4a4a',
+    backgroundColor: '#f0e4d7', // Soft pastel background
     minHeight: '100vh',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
+    padding: '2rem',
   },
   header: {
     marginBottom: '2rem',
   },
   h1: {
-    fontSize: '3rem',
-    color: '#2c3e50',
-    marginBottom: '0.5rem',
+    fontSize: '3.5rem',
+    color: '#d35400', // Muted orange
+    fontFamily: "'Pacifico', cursive",
   },
   p: {
-    fontSize: '1.2rem',
+    fontSize: '1.3rem',
     color: '#7f8c8d',
   },
   main: {
@@ -35,7 +35,7 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     width: '100%',
-    maxWidth: '800px',
+    maxWidth: '900px',
   },
   inputSection: {
     width: '100%',
@@ -44,11 +44,12 @@ const styles = {
   textarea: {
     width: '95%',
     padding: '1rem',
-    fontSize: '1rem',
-    borderRadius: '8px',
-    border: '1px solid #ccc',
+    fontSize: '1.1rem',
+    borderRadius: '15px',
+    border: '2px solid #e5cba8',
     marginBottom: '1rem',
     resize: 'vertical',
+    backgroundColor: '#fffcf7',
   },
   buttons: {
     display: 'flex',
@@ -56,21 +57,23 @@ const styles = {
     gap: '1rem',
   },
   button: {
-    padding: '0.8rem 1.5rem',
+    padding: '0.8rem 1.8rem',
     fontSize: '1rem',
-    backgroundColor: '#3498db',
+    backgroundColor: '#e67e22', // Carrot orange
     color: 'white',
     border: 'none',
-    borderRadius: '5px',
+    borderRadius: '25px',
     cursor: 'pointer',
     transition: 'background-color 0.3s',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
   },
   canvasSection: {
     width: '100%',
-    height: '400px',
-    backgroundColor: '#ecf0f1',
-    borderRadius: '8px',
+    height: '450px',
+    backgroundColor: '#d3c4b4',
+    borderRadius: '20px',
     marginBottom: '2rem',
+    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)',
   },
   downloadSection: {
     width: '100%',
@@ -78,16 +81,18 @@ const styles = {
 };
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.continuous = false;
-recognition.lang = 'en-US';
-recognition.interimResults = false;
-recognition.maxAlternatives = 1;
-
+let recognition;
+if (SpeechRecognition) {
+  recognition = new SpeechRecognition();
+  recognition.continuous = false;
+  recognition.lang = 'en-US';
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+}
 
 function App() {
-  const [text, setText] = useState('Thank you!');
-  const [score, setScore] = useState(0.5); // Start with a neutral score
+  const [text, setText] = useState('Thank you for everything!');
+  const [score, setScore] = useState(0.5);
   const [modelLoaded, setModelLoaded] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const bloomRef = useRef();
@@ -96,6 +101,9 @@ function App() {
     async function loadModel() {
       await loadSentimentModel();
       setModelLoaded(true);
+      // Initial generation
+      const initialScore = getSentimentScore('Thank you for everything!');
+      setScore(initialScore);
     }
     loadModel();
   }, []);
@@ -108,6 +116,7 @@ function App() {
   };
 
   const handleRecord = () => {
+    if (!recognition) return;
     if (isRecording) {
       recognition.stop();
       setIsRecording(false);
@@ -117,16 +126,19 @@ function App() {
     }
   };
 
-  recognition.onresult = (event) => {
-    const speechResult = event.results[0][0].transcript;
-    setText(speechResult);
-    setIsRecording(false);
-  };
+  if (recognition) {
+    recognition.onresult = (event) => {
+      const speechResult = event.results[0][0].transcript;
+      setText(speechResult);
+      setIsRecording(false);
+      handleGenerate(); // Auto-generate after speech
+    };
 
-  recognition.onspeechend = () => {
-    recognition.stop();
-    setIsRecording(false);
-  };
+    recognition.onspeechend = () => {
+      recognition.stop();
+      setIsRecording(false);
+    };
+  }
 
   const handleDownload = () => {
     const exporter = new STLExporter();
@@ -140,6 +152,7 @@ function App() {
       link.href = URL.createObjectURL(blob);
       link.download = 'ThankerToken.stl';
       link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -147,39 +160,39 @@ function App() {
     <div style={styles.app}>
       <header style={styles.header}>
         <h1 style={styles.h1}>ThankerTokens</h1>
-        <p style={styles.p}>Create a unique 3D token to show your gratitude.</p>
+        <p style={styles.p}>A unique 3D token to show your gratitude.</p>
       </header>
       <main style={styles.main}>
         <div style={styles.inputSection}>
           <textarea
             style={styles.textarea}
             placeholder="Type your thank you message here..."
-            rows="5"
+            rows="4"
             value={text}
             onChange={(e) => setText(e.target.value)}
           />
           <div style={styles.buttons}>
-            <button style={styles.button} onClick={handleGenerate} disabled={!modelLoaded}>
-              {modelLoaded ? 'Generate' : 'Loading Model...'}
+            <button style={{...styles.button, backgroundColor: '#27ae60'}} onClick={handleGenerate} disabled={!modelLoaded}>
+              {modelLoaded ? 'Generate Token' : 'Loading AI...'}
             </button>
-            <button style={styles.button} onClick={handleRecord}>
-              {isRecording ? 'Stop Recording' : 'Record Voice'}
-            </button>
+            {recognition && <button style={styles.button} onClick={handleRecord}>
+              {isRecording ? 'Listening...' : 'Record Voice'}
+            </button>}
           </div>
         </div>
         <div style={styles.canvasSection}>
-          <Canvas>
-            <ambientLight intensity={0.5} />
-            <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} />
-            <pointLight position={[-10, -10, -10]} />
+          <Canvas camera={{ position: [0, 0, 7], fov: 50 }}>
+            <ambientLight intensity={0.8} />
+            <spotLight position={[10, 15, 10]} angle={0.3} penumbra={1} intensity={2} castShadow />
+            <pointLight position={[-10, -10, -10]} intensity={1} />
             <Suspense fallback={null}>
               <GratitudeBloom score={score} text={text} ref={bloomRef} />
             </Suspense>
-            <OrbitControls />
+            <OrbitControls autoRotate autoRotateSpeed={0.5} enableZoom={false} />
           </Canvas>
         </div>
         <div style={styles.downloadSection}>
-          <button style={styles.button} onClick={handleDownload}>Download STL</button>
+          <button style={{...styles.button, backgroundColor: '#8e44ad'}} onClick={handleDownload}>Download STL</button>
         </div>
       </main>
     </div>
